@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 
-const SERVER_IP = "192.168.29.138";
-const API_URL = `http://${SERVER_IP}:5000/api/login`;
+const SERVER_IP = "192.168.29.180";
+const API_URL = `http://${SERVER_IP}:3000/api/user/login`;
 
 export default function LoginPage() {
   const [name, setName] = useState("");
@@ -61,6 +61,13 @@ export default function LoginPage() {
             "Login"
           )}
         </button>
+        <button
+          className="text-white text-sm mt-4 underline hover:text-gray-200 transition"
+          onClick={() => router.push("/register")}
+        >
+          Register your self.
+        </button>
+        <br />
 
         <button
           className="text-white text-sm mt-4 underline hover:text-gray-200 transition"
