@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 
-const SERVER_IP = "192.168.29.180";
-const API_URL = `http://192.168.29.180:3000/api/user/register`;
+// const SERVER_IP = "192.168.29.180";
+const API_URL = `http://localhost:4000/api/user/register`;
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -10,7 +10,10 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const handleRegister = async () => {
-    if (!name.trim()) return alert("Please enter a name!");
+    if (!name.trim()) {
+      alert("Please enter a name!");
+      return;
+    }
 
     setLoading(true);
 
@@ -21,15 +24,15 @@ export default function RegisterPage() {
         body: JSON.stringify({ name }),
       });
 
-      if (!res.ok) throw new Error("Registration failed");
+      const data = await res.json();
+      console.log("🔍 API Response:", data);
 
-      const { userId, name: userName } = await res.json();
-      localStorage.setItem("user", JSON.stringify({ userId, name: userName }));
+      localStorage.setItem("user", JSON.stringify(name));
 
+      alert("✅ Registration successful!");
       router.push("/");
     } catch (error) {
-      console.error("Registration failed", error);
-      alert("Failed to register. Try again.");
+      console.error("❌ Registration failed:", error);
     } finally {
       setLoading(false);
     }

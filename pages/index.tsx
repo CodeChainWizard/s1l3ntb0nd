@@ -37,7 +37,6 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true); // ✅ Track loading state
-  const [userdatas, setuserdatas] = useState("");
 
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -46,30 +45,23 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  let userDatas;
-
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    userDatas = storedUser;
-    setuserdatas(userDatas || "");
-    console.log("STORED USER: ", storedUser);
 
-    if (!storedUser) {
-      router.push("/login");
-      return;
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem("user");
+      }
+    } else {
+      const guestUser: User = { userId: "guest", name: "Guest" };
+      localStorage.setItem("user", JSON.stringify(guestUser));
+      setUser(guestUser);
     }
 
-    try {
-      const userData = JSON.parse(storedUser);
-
-      setUser(userData);
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      localStorage.removeItem("user");
-      router.push("/login");
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   }, []);
 
   const addMessage = (message: string) => {
@@ -91,15 +83,18 @@ export default function Home() {
 
       <div className="flex-1 flex flex-col">
         {/* ✅ Greeting Section */}
+        {!loading && user && (
+          <div className="bg-gray-800 p-4 text-center shadow-lg">
+            <p className="text-sm text-gray-400">Start chatting with someone</p>
+          </div>
+        )}
 
         {selectedUser ? (
           <>
-            {/* ✅ Chat Header */}
             <div className="bg-gray-800 p-4 flex items-center shadow-lg">
               <h2 className="text-xl font-bold">{selectedUser.name}</h2>
             </div>
 
-            {/* ✅ Messages (Scrollable) */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages
                 .filter(
@@ -141,7 +136,6 @@ export default function Home() {
               <div ref={messagesEndRef}></div>
             </div>
 
-            {/* ✅ Message Input */}
             <div className="p-4 bg-gray-800">
               <ConfessionForm onSubmit={addMessage} /> {/* ✅ Fixed this */}
             </div>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 
 const SERVER_IP = "192.168.29.180";
-const API_URL = `http://${SERVER_IP}:3000/api/user/login`;
+const API_URL = `http://localhost:4000/api/user/login`;
 
 export default function LoginPage() {
   const [name, setName] = useState("");
@@ -10,29 +10,52 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleLogin = async () => {
-    if (!name.trim()) return alert("Please enter a name!");
+    if (!name.trim()) {
+      alert("Please enter a name!");
+      return;
+    }
 
     setLoading(true);
-    localStorage.setItem("user", JSON.stringify(name));
-    router.push("/");
-    // try {
-    //   const res = await fetch(API_URL, {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ name }),
-    //   });
 
-    //   if (!res.ok) throw new Error("Failed to login");
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
 
-    //   const { userId, name: userName } = await res.json();
-    //   localStorage.setItem("user", JSON.stringify({ userId, name: userName }));
+      console.log("RES DATA: ", res);
 
-    //   router.push("/");
-    // } catch (error) {
-    //   console.error("Login failed", error);
-    // } finally {
-    //   setLoading(false);
-    // }
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid response format (not JSON)");
+      }
+
+      const data = await res.json();
+      console.log("🔍 API Response:", data);
+
+      // ❌ Check for login failure & return early
+      if (!res.ok || !data.status || !data.token || !data.user) {
+        router.push("/login");
+        alert("Login Failed, Try Again!");
+      } else {
+        // ✅ Store token and user info in localStorage
+        localStorage.setItem("user", JSON.stringify(name));
+        localStorage.setItem("token", data.token);
+
+        alert("Login successful!");
+      }
+
+      // 🚀 **Redirect ONLY if the token is valid**
+      if (data.token) {
+        router.push("/");
+      } else {
+      }
+    } catch (error) {
+      console.error("❌ Login failed:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
