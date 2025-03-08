@@ -27,8 +27,8 @@ export default function RegisterPage() {
         const data = await res.json();
         console.log("🔍 API Response:", data);
 
-        localStorage.setItem("user", JSON.stringify(name));
-        localStorage.setItem("uuid", data.uuid);
+        localStorage.setItem("user", name);
+        // localStorage.setItem("uuid", data.uuid);
 
         alert("✅ Registration successful!");
         router.push("/");

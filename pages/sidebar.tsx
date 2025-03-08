@@ -21,39 +21,43 @@ export default function SideBar({ selectedUser, setSelectedUser }: SideBarProps)
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user") || ""; // Get plain text
     const uuid = localStorage.getItem("uuid");
   
-    if (storedUser) {
-      try {
-        const userData: User = JSON.parse(storedUser);
-        setUser(userData);
-        setUsername(JSON.stringify(storedUser));
+    if (storedUser.trim() !== "") {
+      setUsername(storedUser); // Store as plain text
   
-        const newSocket = io(API_URL, { transports: ["websocket"] });
+      const newSocket = io(API_URL, { transports: ["websocket"] });
   
-        newSocket.on("connect", () => {
-          console.log("✅ WebSocket connected");
-          newSocket.emit("register", { username: userData.name, uuid: uuid });
-        });
+      newSocket.on("connect", () => {
+        console.log("✅ WebSocket connected");
+        newSocket.emit("register", { username: storedUser, uuid: uuid });
+      });
   
+      newSocket.on("updateOnlineUsers", (onlineUsers) => {
+        console.log("Received Online Users:", onlineUsers);
+        
+        // Ensure we map the data correctly
+        const formattedUsers = onlineUsers.map((user: { username: string; uuid: string }) => ({
+          userId: user.uuid,
+          name: user.username,
+        }));
       
-        newSocket.on("updateOnlineUsers", (onlineUsers) => {
-          console.log("Received Online Users:", onlineUsers); // Debugging log
-          setUsers(onlineUsers.filter((user: User) => user.name));
-        });
+        setUsers(formattedUsers);
+      });
+      
   
-        setSocket(newSocket);
+      setSocket(newSocket);
   
-        return () => {
-          newSocket.disconnect();
-          console.log("WebSocket disconnected");
-        };
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
+      return () => {
+        newSocket.disconnect();
+        console.log("WebSocket disconnected");
+      };
+    } else {
+      console.error("User data is empty or invalid");
     }
   }, []);
+  
   
 
 

@@ -1,50 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import ConfessionList from "../pages/components/ConfessionList";
-import ConfessionForm from "../pages/components/ConfessionForm";
 import SideBar from "./sidebar";
+import ConfessionForm from "../pages/components/ConfessionForm";
 import { io, Socket } from "socket.io-client";
 
-type Message = { message: string; createdAt: string; userId: string };
+type Message = { message: string; createdAt: string; senderUUID: string; receiverUUID: string };
 type User = { userId: string; name: string };
 
-const DUMMY_USERS: User[] = [
-  { userId: "1", name: "Alice" },
-  { userId: "2", name: "Bob" },
-  { userId: "3", name: "Charlie" },
-];
-
-const DUMMY_MESSAGES: Message[] = [
-  {
-    userId: "1",
-    message: "Hey! How's it going?",
-    createdAt: "2025-03-07T12:00:00Z",
-  },
-  {
-    userId: "2",
-    message: "Hello! What's up?",
-    createdAt: "2025-03-07T12:10:00Z",
-  },
-  { userId: "3", message: "Good morning!", createdAt: "2025-03-07T12:20:00Z" },
-  {
-    userId: "1",
-    message: "Long time no see!",
-    createdAt: "2025-03-07T12:30:00Z",
-  },
-];
+const API_URL = `http://localhost:5000`;
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>(DUMMY_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [uuid, setUuuid] = useState("");
-  const [socket, setSocket] = useState<Socket | null>(null); 
-
-  const router = useRouter();
+  const [socket, setSocket] = useState<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-  const API_URL = `http://localhost:5000`;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,98 +22,57 @@ export default function Home() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    const uuid = localStorage.getItem("uuid");
-    if (storedUser) {
-      try {
-        const userData: User = JSON.parse(storedUser);
-        setUser(userData);
-  
-        const newSocket = io(API_URL, { transports: ["websocket"] });
-  
-        newSocket.on("connect", () => {
-          console.log("WebSocket connected");
-          newSocket.emit("register", { username: userData.name, uuid: uuid });
-        });
-  
+    const uuid = localStorage.getItem("uuid") || "";
 
-        newSocket.on("updateOnlineUsers", (onlineUsers) => {
-          console.log("Received Online Users:", onlineUsers);
-          setUser(onlineUsers.filter((user: User) => user.name));
-        });
-  
-        // Save socket instance
-        setSocket(newSocket);
-  
-  
-        return () => {
-          newSocket.disconnect();
-          console.log("WebSocket disconnected");
-        };
-      } catch (error) {
-        console.error("Error parsing user data:", error);
+    if (storedUser && uuid) {
+      let userData: User;
+      try {
+        userData = JSON.parse(storedUser);
+      } catch {
+        userData = { name: storedUser, userId: uuid };
       }
+      setUser(userData);
+
+      const newSocket = io(API_URL, { transports: ["websocket"] });
+
+      newSocket.on("connect", () => {
+        console.log("WebSocket connected");
+        newSocket.emit("register", { username: userData.name, uuid: uuid });
+      });
+
+      newSocket.on("receiveMessage", (msg) => {
+        console.log("Received Message:", msg);
+        setMessages((prev) => [...prev, msg]);
+      });
+
+      setSocket(newSocket);
+
+      return () => {
+        newSocket.disconnect();
+        console.log("WebSocket disconnected");
+      };
     }
   }, []);
-  
-  const fetchMessages = async () => {
-    if (!user || !uuid) return;
-  
-    try {
-      const res = await fetch(`${API_URL}/messages/${uuid}`);
-  
-      if (!res.ok) {
-        throw new Error(`Failed to fetch messages: ${res.statusText}`);
-      }
-  
-      const messages: Message[] = await res.json();
-      setMessages(messages.slice(-50)); // Store only the latest 50 messages
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-    }
-  };
-  
-  const addMessage = async (message: string) => {
-    
-    if (!user || !uuid) return;
-  
-    const newMessage: Message = {
-      message,
+
+  const addMessage = (message: string) => {
+    if (!socket || !user || !selectedUser) return;
+
+    const newMessage = {
+      senderUUID: user.userId,
+      receiverUUID: selectedUser.userId,
+      message: message,
       createdAt: new Date().toISOString(),
-      userId: uuid,
     };
-  
-    try {
-      const res = await fetch(`${API_URL}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMessage),
-      });
-  
-      if (!res.ok) {
-        throw new Error(`Failed to send message: ${res.statusText}`);
-      }
-  
-      const savedMessage: Message = await res.json();
-      setMessages((prevMessages) => [...prevMessages, savedMessage]);
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
+
+    console.log("Sending Message:", newMessage);
+    socket.emit("sendMessage", newMessage);
+    setMessages((prev) => [...prev, newMessage]); // Update UI immediately
   };
-  
 
   return (
     <div className="flex h-screen bg-gray-900 text-white">
-      {/* Sidebar */}
       <SideBar selectedUser={selectedUser} setSelectedUser={setSelectedUser} />
-
       <div className="flex-1 flex flex-col">
-        {/* ✅ Greeting Section */}
-        {!loading && user && (
-          <div className="bg-gray-800 p-4 text-center shadow-lg">
-            <p className="text-sm text-gray-400">Start chatting with someone</p>
-          </div>
-        )}
-
         {selectedUser ? (
           <>
             <div className="bg-gray-800 p-4 flex items-center shadow-lg">
@@ -154,15 +83,13 @@ export default function Home() {
               {messages
                 .filter(
                   (m) =>
-                    m.userId === selectedUser?.userId ||
-                    m.userId === user?.userId
+                    (m.senderUUID === selectedUser.userId &&
+                      m.receiverUUID === user?.userId) ||
+                    (m.senderUUID === user?.userId &&
+                      m.receiverUUID === selectedUser.userId)
                 )
                 .map((msg, index) => {
-                  const isMyMessage = msg.userId === user?.userId;
-                  const sender = isMyMessage
-                    ? user
-                    : DUMMY_USERS.find((u) => u.userId === msg.userId);
-
+                  const isMyMessage = msg.senderUUID === user?.userId;
                   return (
                     <div
                       key={index}
@@ -170,12 +97,6 @@ export default function Home() {
                         isMyMessage ? "items-end" : "items-start"
                       }`}
                     >
-                    
-                      <span className="text-xs text-gray-400 mb-1">
-                        {sender?.name}
-                      </span>
-
-
                       <div
                         className={`p-3 rounded-lg max-w-xs ${
                           isMyMessage
