@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 
 const SERVER_IP = "192.168.29.180";
-const API_URL = `http://localhost:4000/api/user/login`;
+const API_URL = `http://localhost:5000/join`;
 
 export default function LoginPage() {
   const [name, setName] = useState("");
@@ -20,37 +20,18 @@ export default function LoginPage() {
     try {
       const res = await fetch(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        headers: { "Content-Type": "application/json"},
+        body: JSON.stringify({username: name }),
       });
-
-      console.log("RES DATA: ", res);
-
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Invalid response format (not JSON)");
-      }
 
       const data = await res.json();
       console.log("🔍 API Response:", data);
 
-      // ❌ Check for login failure & return early
-      if (!res.ok || !data.status || !data.token || !data.user) {
-        router.push("/login");
-        alert("Login Failed, Try Again!");
-      } else {
-        // ✅ Store token and user info in localStorage
-        localStorage.setItem("user", JSON.stringify(name));
-        localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(name));
+      localStorage.setItem("uuid", data.uuid);
 
-        alert("Login successful!");
-      }
-
-      // 🚀 **Redirect ONLY if the token is valid**
-      if (data.token) {
-        router.push("/");
-      } else {
-      }
+      alert("✅ Login successful!");
+      router.push("/");
     } catch (error) {
       console.error("❌ Login failed:", error);
     } finally {

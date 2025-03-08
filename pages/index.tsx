@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import ConfessionList from "../pages/components/ConfessionList";
 import ConfessionForm from "../pages/components/ConfessionForm";
 import SideBar from "./sidebar";
+import { io, Socket } from "socket.io-client";
 
 type Message = { message: string; createdAt: string; userId: string };
 type User = { userId: string; name: string };
@@ -36,10 +37,14 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>(DUMMY_MESSAGES);
   const [user, setUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // ✅ Track loading state
+  const [loading, setLoading] = useState(true);
+  const [uuid, setUuuid] = useState("");
+  const [socket, setSocket] = useState<Socket | null>(null); 
 
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const API_URL = `http://localhost:5000`;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,34 +52,84 @@ export default function Home() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-
+    const uuid = localStorage.getItem("uuid");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const userData: User = JSON.parse(storedUser);
+        setUser(userData);
+  
+        const newSocket = io(API_URL, { transports: ["websocket"] });
+  
+        newSocket.on("connect", () => {
+          console.log("WebSocket connected");
+          newSocket.emit("register", { username: userData.name, uuid: uuid });
+        });
+  
+
+        newSocket.on("updateOnlineUsers", (onlineUsers) => {
+          console.log("Received Online Users:", onlineUsers);
+          setUser(onlineUsers.filter((user: User) => user.name));
+        });
+  
+        // Save socket instance
+        setSocket(newSocket);
+  
+  
+        return () => {
+          newSocket.disconnect();
+          console.log("WebSocket disconnected");
+        };
       } catch (error) {
         console.error("Error parsing user data:", error);
-        localStorage.removeItem("user");
       }
-    } else {
-      const guestUser: User = { userId: "guest", name: "Guest" };
-      localStorage.setItem("user", JSON.stringify(guestUser));
-      setUser(guestUser);
     }
-
-    setLoading(false);
   }, []);
-
-  const addMessage = (message: string) => {
-    if (!user) return;
-
+  
+  const fetchMessages = async () => {
+    if (!user || !uuid) return;
+  
+    try {
+      const res = await fetch(`${API_URL}/messages/${uuid}`);
+  
+      if (!res.ok) {
+        throw new Error(`Failed to fetch messages: ${res.statusText}`);
+      }
+  
+      const messages: Message[] = await res.json();
+      setMessages(messages.slice(-50)); // Store only the latest 50 messages
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    }
+  };
+  
+  const addMessage = async (message: string) => {
+    
+    if (!user || !uuid) return;
+  
     const newMessage: Message = {
       message,
       createdAt: new Date().toISOString(),
-      userId: user.userId,
+      userId: uuid,
     };
-
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  
+    try {
+      const res = await fetch(`${API_URL}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMessage),
+      });
+  
+      if (!res.ok) {
+        throw new Error(`Failed to send message: ${res.statusText}`);
+      }
+  
+      const savedMessage: Message = await res.json();
+      setMessages((prevMessages) => [...prevMessages, savedMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   };
+  
 
   return (
     <div className="flex h-screen bg-gray-900 text-white">
@@ -115,12 +170,12 @@ export default function Home() {
                         isMyMessage ? "items-end" : "items-start"
                       }`}
                     >
-                      {/* ✅ Sender Name */}
+                    
                       <span className="text-xs text-gray-400 mb-1">
                         {sender?.name}
                       </span>
 
-                      {/* ✅ Message Bubble */}
+
                       <div
                         className={`p-3 rounded-lg max-w-xs ${
                           isMyMessage
@@ -137,7 +192,7 @@ export default function Home() {
             </div>
 
             <div className="p-4 bg-gray-800">
-              <ConfessionForm onSubmit={addMessage} /> {/* ✅ Fixed this */}
+              <ConfessionForm onSubmit={addMessage} />
             </div>
           </>
         ) : (

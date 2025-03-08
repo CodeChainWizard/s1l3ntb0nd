@@ -2,41 +2,42 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 
 // const SERVER_IP = "192.168.29.180";
-const API_URL = `http://localhost:4000/api/user/register`;
+const API_URL = `http://localhost:5000/join`;
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleRegister = async () => {
-    if (!name.trim()) {
-      alert("Please enter a name!");
-      return;
-    }
+    const handleRegister = async () => {
+      if (!name.trim()) {
+        alert("Please enter a name!");
+        return;
+      }
 
-    setLoading(true);
+      setLoading(true);
 
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json"},
+          body: JSON.stringify({username: name }),
+        });
 
-      const data = await res.json();
-      console.log("🔍 API Response:", data);
+        const data = await res.json();
+        console.log("🔍 API Response:", data);
 
-      localStorage.setItem("user", JSON.stringify(name));
+        localStorage.setItem("user", JSON.stringify(name));
+        localStorage.setItem("uuid", data.uuid);
 
-      alert("✅ Registration successful!");
-      router.push("/");
-    } catch (error) {
-      console.error("❌ Registration failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        alert("✅ Registration successful!");
+        router.push("/");
+      } catch (error) {
+        console.error("❌ Registration failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-green-500 via-blue-500 to-purple-500">
