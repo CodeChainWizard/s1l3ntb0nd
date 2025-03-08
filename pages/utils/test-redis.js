@@ -1,14 +1,16 @@
-import redis from "../../utils/redis";
+import dynamic from "next/dynamic";
+
+// Dynamically import Redis, disabling SSR
+const redisClient = dynamic(() => import("../../lib/redis"), { ssr: false });
 
 export default async function handler(req, res) {
   try {
-    await redis.set("test-key", "Hello Redis!");
-    const value = await redis.get("test-key");
+    const redis = await redisClient;
+    await redis.set("test", "Hello from Redis");
+    const value = await redis.get("test");
 
-    res.status(200).json({ message: "🔹 Stored Value:", value });
+    res.status(200).json({ message: value });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "❌ Redis Test Error", details: error.message });
+    res.status(500).json({ error: "Redis error", details: error.message });
   }
 }

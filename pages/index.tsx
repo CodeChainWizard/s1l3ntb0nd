@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/router";
-import ConfessionList from "../pages/components/ConfessionList";
+// import { useRouter } from "next/router";
+// import ConfessionList from "../pages/components/ConfessionList";
 import ConfessionForm from "../pages/components/ConfessionForm";
 import SideBar from "./sidebar";
 
@@ -38,7 +38,7 @@ export default function Home() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true); // ✅ Track loading state
 
-  const router = useRouter();
+  // const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {

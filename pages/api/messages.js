@@ -12,7 +12,7 @@ export default async function handler(req, res) {
       const data = await response.json();
       res.status(response.status).json(data);
     } catch (error) {
-      res.status(500).json({ error: "Failed to connect to backend" });
+      res.status(500).json({ error: "Failed to connect to backend : " + error });
     }
   } else if (req.method === "GET") {
     const { id } = req.query;
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       const data = await response.json();
       res.status(response.status).json(data);
     } catch (error) {
-      res.status(500).json({ error: "Failed to connect to backend" });
+      res.status(500).json({ error: "Failed to connect to backend : "+ error });
     }
   } else {
     res.setHeader("Allow", ["GET", "POST"]);

@@ -20,12 +20,11 @@ export default function SideBar({
   selectedUser,
   setSelectedUser,
 }: SideBarProps) {
-  const [users, setUsers] = useState<User[]>(DUMMY_USERS);
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("Guest");
   const [search, setSearch] = useState("");
   const router = useRouter();
-
+  
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -53,14 +52,16 @@ export default function SideBar({
   };
 
   // ✅ Show all users initially, filter dynamically when searching
-  const filteredUsers = users.filter((u) =>
+  const filteredUsers = DUMMY_USERS.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase())
   );
+  
+
 
   return (
     <div className="w-1/4 h-screen bg-gray-800 p-4 border-r border-gray-700 flex flex-col">
-      <h2 className="text-xl font-bold mb-4 text-white">Welcome, {user}!</h2>
-
+      <h2 className="text-xl font-bold mb-4 text-white">Welcome, {user ? user.name : "Guest"}!</h2>
+      <div style={{ display: "none" }}>{username}</div>
       <div className="flex items-center bg-gray-700 rounded-lg p-2 mb-4">
         <input
           type="text"

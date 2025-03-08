@@ -2,16 +2,22 @@ import { createClient } from "redis";
 
 const redis = createClient({
   socket: {
-    host: "redis-19440.c283.us-east-1-4.ec2.redns.redis-cloud.com",
-    port: 19440,
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT),
   },
-  username: "default",
-  password: "Ajb3Mh8mPkiMCz6zmwnJPGYw8lHc79oX",
+  username: process.env.REDIS_USER,
+  password: process.env.REDIS_PASS,
 });
 
 redis.on("connect", () => console.log("✅ Redis Connected"));
 redis.on("error", (err) => console.error("❌ Redis Error:", err));
 
-await redis.connect();
+(async () => {
+  try {
+    await redis.connect();
+  } catch (err) {
+    console.error("❌ Redis Connection Failed:", err);
+  }
+})();
 
 export default redis;

@@ -1,17 +1,23 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
+import { ToastContainer, toast } from "react-toastify";
 
-const SERVER_IP = "192.168.29.180";
-const API_URL = `http://localhost:4000/api/user/login`;
+const API_URL = `http://${process.env.NEXT_PUBLIC_DOMAIN}:${process.env.NEXT_PUBLIC_PORT}/api/user/register`;
 
 export default function LoginPage() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
-    if (!name.trim()) {
-      alert("Please enter a name!");
+    if (!name.trim() || !password.trim()) {
+      toast.error(
+        `Please enter a ${!name.trim() ? "name " : ""}${
+          !name.trim() && !password.trim() ? "and " : ""
+        }${!password.trim() ? "password" : ""}!`,
+        { position: "top-right", autoClose: 3000 }
+      );
       return;
     }
 
@@ -21,7 +27,7 @@ export default function LoginPage() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ "name": name, "password" : password }),
       });
 
       console.log("RES DATA: ", res);
@@ -37,13 +43,20 @@ export default function LoginPage() {
       // ❌ Check for login failure & return early
       if (!res.ok || !data.status || !data.token || !data.user) {
         router.push("/login");
-        alert("Login Failed, Try Again!");
+        toast.error("❌ Login failed. Please try again.", {
+          position: "top-right",
+          autoClose: 3000,
+        });
       } else {
         // ✅ Store token and user info in localStorage
-        localStorage.setItem("user", JSON.stringify(name));
+        localStorage.setItem("user", name);
+        localStorage.setItem("password", password);
         localStorage.setItem("token", data.token);
 
-        alert("Login successful!");
+        toast.success("✅ Login successful!", {
+          position: "top-right",
+          autoClose: 2000,
+        });
       }
 
       // 🚀 **Redirect ONLY if the token is valid**
@@ -53,13 +66,18 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error("❌ Login failed:", error);
+      toast.error("❌ Login failed. Please try again. " + error, {
+        position: "top-right",
+        autoClose: 3000,
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
+    <div className="flex items-center justify-center min-h-screen bg-gray-800">
+      <ToastContainer />
       <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-lg max-w-md w-full text-center border border-white/20">
         <h1 className="text-3xl font-bold text-white mb-6">
           Login as Anonymous
@@ -73,8 +91,16 @@ export default function LoginPage() {
           onChange={(e) => setName(e.target.value)}
         />
 
+        <input
+          type="password"
+          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 mt-3 focus:outline-none focus:ring-2 focus:ring-white"
+          placeholder="Enter Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
         <button
-          className="w-full mt-4 p-3 bg-white text-indigo-600 font-bold rounded-lg hover:bg-gray-100 transition disabled:opacity-50 flex items-center justify-center"
+          className="w-full mt-4 p-3 bg-white text-black font-bold rounded-lg hover:bg-gray-100 transition disabled:opacity-50 flex items-center justify-center"
           onClick={handleLogin}
           disabled={loading}
         >
