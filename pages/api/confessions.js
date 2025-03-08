@@ -1,4 +1,4 @@
-import redis from "../utils/redis";
+import redis from "../../lib/redis";
 
 export default async function handler(req, res) {
   const { method } = req;
